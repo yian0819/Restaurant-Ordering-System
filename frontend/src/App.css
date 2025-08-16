@@ -93,3 +93,37 @@
   margin: 15px 0;
 }
 
+.order-form-row {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.menu_form_row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.menu_form_row input {
+  flex: 1;
+  padding: 6px 8px;
+  box-sizing: border-box;
+}
+
+input[type="checkbox"] {
+  transform: scale(1.5);
+}
+
+.order-card {
+  background: white;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  transition: background 0.3s ease;
+}
+
+.order-card.order-done {
+  background: #e0e0e0;
+  color: #555;
+}

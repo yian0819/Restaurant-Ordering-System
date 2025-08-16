@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS orders (
   extra_charge REAL,
   paid INTEGER,
   status TEXT DEFAULT '已下单',
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  created_at TEXT DEFAULT (datetime('now', '+8 hours'))
 )
 `);
 

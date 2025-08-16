@@ -4,6 +4,12 @@ import "./App.css";
 
 const API_URL = "http://localhost:5000";
 
+function getTodayUTC8() {
+  const now = new Date();
+  now.setHours(now.getHours() + 8);
+  return now.toISOString().slice(0, 10);
+}
+
 function App() {
   const [activeTab, setActiveTab] = useState("menu");
   const [menus, setMenus] = useState([]);
@@ -13,6 +19,7 @@ function App() {
   const [newMenuName, setNewMenuName] = useState("");
   const [newMenuPrice, setNewMenuPrice] = useState("");
   const [menuOptionInput, setMenuOptionInput] = useState({});
+  const [editingMenuOptionsId, setEditingMenuOptionsId] = useState(null);
 
   const [orderForm, setOrderForm] = useState({
     tableNumber: "",
@@ -23,7 +30,7 @@ function App() {
     paid: false,
   });
 
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
+  const [selectedDate, setSelectedDate] = useState(getTodayUTC8());
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
@@ -88,9 +95,9 @@ function App() {
   const addItemToOrder = (menu) => {
     const optionSelections = {};
     menu.options.forEach(opt => { if (!optionSelections[opt.category]) optionSelections[opt.category] = ""; });
-    setOrderForm(prev => ({ 
-      ...prev, 
-      items: [...prev.items, { menuId: menu.id, name: menu.name, base_price: menu.base_price, options: optionSelections, quantity: 1 }] 
+    setOrderForm(prev => ({
+      ...prev,
+      items: [...prev.items, { menuId: menu.id, name: menu.name, base_price: menu.base_price, options: optionSelections, quantity: 1 }]
     }));
   };
 
@@ -163,8 +170,10 @@ function App() {
         <>
           <h2>菜单管理</h2>
           <div className="card">
-            <input placeholder="菜单名称" value={newMenuName} onChange={e => setNewMenuName(e.target.value)} />
-            <input type="number" placeholder="价格" value={newMenuPrice} onChange={e => setNewMenuPrice(e.target.value)} />
+            <div className="menu_form_row">
+              <input placeholder="菜单名称" value={newMenuName} onChange={e => setNewMenuName(e.target.value)} />
+              <input type="number" placeholder="价格" value={newMenuPrice} onChange={e => setNewMenuPrice(e.target.value)} />
+            </div>
             <button onClick={addMenu}>新增菜品</button>
           </div>
 
@@ -172,13 +181,47 @@ function App() {
             <div key={menu.id} className="card">
               <strong>{menu.name}</strong> - {menu.base_price} MYR
               <button onClick={() => deleteMenu(menu.id)}>删除菜单</button>
-              <h4>附加选项</h4>
-              {menu.options.map(opt => (
-                <div key={opt.id}>{opt.category}: {opt.option_name} <button onClick={() => deleteMenuOption(opt.id)}>删除</button></div>
-              ))}
-              <input placeholder="类别" value={menuOptionInput[menu.id]?.category || ""} onChange={e => setMenuOptionInput(prev => ({ ...prev, [menu.id]: { ...prev[menu.id], category: e.target.value } }))} />
-              <input placeholder="选项名" value={menuOptionInput[menu.id]?.option_name || ""} onChange={e => setMenuOptionInput(prev => ({ ...prev, [menu.id]: { ...prev[menu.id], option_name: e.target.value } }))} />
-              <button onClick={() => addMenuOption(menu.id)}>新增选项</button>
+
+              <button onClick={() => setEditingMenuOptionsId(
+                editingMenuOptionsId === menu.id ? null : menu.id
+              )}>
+                {editingMenuOptionsId === menu.id ? "关闭附加选项" : "编辑附加选项"}
+              </button>
+
+              {editingMenuOptionsId === menu.id && (
+                <div className="menu-options-section">
+                  <h4>附加选项</h4>
+                  {menu.options.map(opt => (
+                    <div key={opt.id}>
+                      {opt.category}: {opt.option_name}
+                      <button onClick={() => deleteMenuOption(opt.id)}>删除</button>
+                    </div>
+                  ))}
+                  <div className="menu_form_row">
+                    <input
+                      placeholder="类别"
+                      value={menuOptionInput[menu.id]?.category || ""}
+                      onChange={e =>
+                        setMenuOptionInput(prev => ({
+                          ...prev,
+                          [menu.id]: { ...prev[menu.id], category: e.target.value }
+                        }))
+                      }
+                    />
+                    <input
+                      placeholder="选项名"
+                      value={menuOptionInput[menu.id]?.option_name || ""}
+                      onChange={e =>
+                        setMenuOptionInput(prev => ({
+                          ...prev,
+                          [menu.id]: { ...prev[menu.id], option_name: e.target.value }
+                        }))
+                      }
+                    />
+                    <button onClick={() => addMenuOption(menu.id)}>新增选项</button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </>
@@ -188,19 +231,57 @@ function App() {
         <>
           <h2>下单</h2>
           <div className="order-form card">
-            <input placeholder="桌号" value={orderForm.tableNumber} onChange={e => setOrderForm(prev => ({ ...prev, tableNumber: e.target.value }))} />
-            <label>
-              打包
-              <input type="checkbox" checked={orderForm.takeaway} onChange={e => setOrderForm(prev => ({ ...prev, takeaway: e.target.checked }))} />
-            </label>
-            <label>
-              额外收费
-              <input type="number" value={orderForm.extra_charge || 0} onChange={e => setOrderForm(prev => ({ ...prev, extra_charge: parseFloat(e.target.value) || 0 }))} placeholder="可填正数或负数" />
-            </label>
-            <label>
-              已付费
-              <input type="checkbox" checked={orderForm.paid} onChange={e => setOrderForm(prev => ({ ...prev, paid: e.target.checked }))} />
-            </label>
+            <div className="order-form-row">
+              <label>
+                桌号
+                <input
+                  type="text"
+                  placeholder="桌号"
+                  value={orderForm.tableNumber}
+                  onChange={e =>
+                    setOrderForm(prev => ({ ...prev, tableNumber: e.target.value }))
+                  }
+                />
+              </label>
+
+              <label>
+                打包
+                <input
+                  type="checkbox"
+                  checked={orderForm.takeaway}
+                  onChange={e =>
+                    setOrderForm(prev => ({ ...prev, takeaway: e.target.checked }))
+                  }
+                />
+              </label>
+
+              <label>
+                额外收费
+                <input
+                  type="number"
+                  value={orderForm.extra_charge || 0}
+                  onChange={e =>
+                    setOrderForm(prev => ({
+                      ...prev,
+                      extra_charge: parseFloat(e.target.value) || 0
+                    }))
+                  }
+                  placeholder="可填正数或负数"
+                />
+              </label>
+
+              <label>
+                已付费
+                <input
+                  type="checkbox"
+                  checked={orderForm.paid}
+                  onChange={e =>
+                    setOrderForm(prev => ({ ...prev, paid: e.target.checked }))
+                  }
+                />
+              </label>
+            </div>
+
             <textarea placeholder="备注" rows={3} value={orderForm.notes} onChange={e => setOrderForm(prev => ({ ...prev, notes: e.target.value }))} style={{ width: "100%", padding: "5px", borderRadius: "4px", border: "1px solid #ccc", boxSizing: "border-box", marginTop: "5px" }} />
 
             <h3>选择菜品</h3>
@@ -251,19 +332,18 @@ function App() {
 
           <div className="card">
             <div>今日总订单份数: {summary.totalCount}</div>
-            <div>今日总收入: {summary.totalRevenue}</div>
+            <div>今日总收入: {summary.totalRevenue} MYR</div>
           </div>
 
           {paginatedOrders.map(order => (
-            <div key={order.id} className="card">
+            <div key={order.id} className={`order-card ${order.status === "出餐" ? "order-done" : ""}`}>
               <div>
-                桌号: {order.tableNumber}, 打包: {order.takeaway ? "是" : "否"}, 状态: {order.status}, 已付费: {order.paid ? "是" : "否"}
-                <button onClick={() => changeOrderStatus(order.id, "制作中")}>制作中</button>
-                <button onClick={() => changeOrderStatus(order.id, "出餐")}>出餐</button>
+                桌号: {order.tableNumber}, 打包: {order.takeaway ? "YES" : "NO"}, 状态: {order.status}, 已付费: {order.paid ? "YES" : "NO"}
                 <button onClick={() => deleteOrder(order.id)}>删除</button>
                 <button onClick={() => { editingOrderId === order.id ? setEditingOrderId(null) : startEditingOrder(order); }}>
                   {editingOrderId === order.id ? "取消编辑" : "编辑"}
                 </button>
+
               </div>
 
               {editingOrderId === order.id && (
@@ -316,11 +396,14 @@ function App() {
                 菜品:
                 {order.items.map((it, i) => (
                   <div key={i}>
-                    {it.name} - {Object.entries(it.options).map(([k, v]) => `${k}:${v}`).join(", ")} x{it.quantity || 1}
+                    {it.name} x{it.quantity || 1} （{Object.entries(it.options).map(([k, v]) => `${k}:${v}`).join("、")}） 
                   </div>
                 ))}
                 <div>备注: {order.notes}</div>
-                <div>额外金额: {order.extra_charge}</div>
+                <div>额外金额: {order.extra_charge} MYR</div>
+                <button onClick={() => changeOrderStatus(order.id, "已下单")}>已下单</button>
+                <button onClick={() => changeOrderStatus(order.id, "制作中")}>制作中</button>
+                <button onClick={() => changeOrderStatus(order.id, "出餐")}>出餐</button>
               </div>
             </div>
           ))}
